@@ -15,7 +15,7 @@ int main(void)
 	int sockfd, con_fd, ret;
 	struct sockaddr_in my_addr;
 	struct sockaddr_in their_addr;
-	int sin_size;
+	uint sin_size;
     
 	/*
 			struct sockaddr_in {
@@ -29,7 +29,7 @@ int main(void)
 	pid_t pid; // signed integer type which is capable of representing a process ID
 
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);          // create socket
-	
+
 	if (sockfd <0)
 	{
 		printf("error in socket!");
@@ -66,6 +66,7 @@ int main(void)
 		// addr is a pointer to a sockaddr struct filled with addr of peer socket
 		// addrlen is a val-result arg. Initially contain size of struct pointed to by addr
 		con_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);            //accept the packet
+
 		if (con_fd <0)
 		{
 			printf("error in accept\n");
