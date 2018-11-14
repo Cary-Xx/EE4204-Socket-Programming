@@ -1,5 +1,5 @@
 /*******************************
-udp_client.c: the source file of the client in udp
+udp_client.c: the source file of the client in udp transmission
 ********************************/
 
 #include "headsock.h" // include the header file for UDP transmission
@@ -30,12 +30,12 @@ int main(int argc, char **argv)
 	*/
 
     if (argc != 2)
-    { // check if argument is not 2
+    {
         printf("parameters not match");
     }
 
-    // returns struct of type hostent for given hostname. name is either by hostname or IPv4 or IPv6
-    sh = gethostbyname(argv[1]); //get host's information
+    // returns struct of type hostent for given hostname or IPv4
+    sh = gethostbyname(argv[1]);
     if (sh == NULL)
     {
         printf("error when gethostby name");
@@ -85,20 +85,21 @@ int main(int argc, char **argv)
 
 float str_cli4(FILE *fp, int sockfd, long *len)
 {
-    char *buf;
-    long lsize, ci;
-    char sends[DATALEN]; // packet to be sent
-    struct ack_so ack;
-    int n, slen;
+    char *buf;               // buffer char array
+    long lsize, ci;          // lsize -> entire size, ci -> current index
+    char sends[2 * DATALEN]; // packet to be sent
+    struct ack_so ack;       //
+    int n, slen;             // 1DU or 2DU
     float time_inv = 0.0;
     struct timeval sendt, recvt;
     ci = 0;
     int stage = 1;
 
     fseek(fp, 0, SEEK_END);
+    // returns current file position of given stream
     // SEEK_SET / SEEK_CUR / SEEK_END
     // int fseek(FILE *stream, long int offset, int whence)
-    // returns current file position of given stream
+
     lsize = ftell(fp); // lsize get's the last position of the file
     rewind(fp);        // sets back the file position to the start
     printf("The file length is %d bytes\n", (int)lsize);
@@ -129,16 +130,6 @@ float str_cli4(FILE *fp, int sockfd, long *len)
                     slen = lsize + 1 - ci;
                 else
                     slen = DATALEN;
-
-                memcpy(sends, (buf + ci), slen);
-
-                n = send(sockfd, &sends, slen, 0);
-                if (n == -1)
-                {
-                    printf("send error!"); //send the data
-                    exit(1);
-                }
-                ci += slen;
             }
         }
         else
@@ -147,27 +138,28 @@ float str_cli4(FILE *fp, int sockfd, long *len)
                 slen = lsize + 1 - ci;
             else
                 slen = DATALEN;
+        }
 
-            memcpy(sends, (buf + ci), slen);
+        memcpy(sends, (buf + ci), slen);
 
-            n = send(sockfd, &sends, slen, 0);
-            if (n == -1)
-            {
-                printf("send error!"); //send the data
-                exit(1);
-            }
+        n = send(sockfd, &sends, slen, 0);
+        if (n == -1)
+        {
+            printf("send error!"); //send the data
+            exit(1);
+        }
+
+        if ((n = recv(sockfd, &ack, 2, 0)) == -1) //receive the ack
+        {
+            printf("error when receiving ack\n");
+            exit(1);
+        }
+        if (ack.num != 1 || ack.len != 0)
+        {
+            printf("error in transmission\n");
         }
     }
-    if ((n = recv(sockfd, &ack, 2, 0)) == -1) //receive the ack
-    {
-        printf("error when receiving ack\n");
-        exit(1);
-    }
-    if (ack.num != 1 || ack.len != 0)
-    {
-        printf("error in transmission\n");
-    }
-
+    
     // calculating time taken for transfer
     gettimeofday(&recvt, NULL); //get current time
     *len = ci;
