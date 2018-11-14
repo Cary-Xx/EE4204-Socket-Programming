@@ -2,14 +2,13 @@
 udp_ser.c: the source file of the server in udp transmission
 **************************************/
 
-#include "headsock.h" // include the header file for UDP transmission
+#include "headsock.h"                      // include the header file for UDP transmission
 
-void str_ser4(int sockfd); // transmitting and receiving function
+void str_ser4(int sockfd);                 // transmitting and receiving function
 
-int main(int argc, char *argv[])
+int main(void)
 {
-
-    int sockfd; // store the values returned by the socket() system call
+    int sockfd;                            // store the values returned by the socket() system call
     struct sockaddr_in my_addr;
 
     /* 
@@ -58,11 +57,10 @@ int main(int argc, char *argv[])
     // int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 
     printf("waiting for data\n");
-    while (1)
-    {
-        str_ser4(sockfd); // send and receive
-    }
-    close(sockfd); // close a socket and terminate
+
+    str_ser4(sockfd);                      // send and receive
+
+    close(sockfd);                         // close a socket and terminate
     exit(0);
 }
 
@@ -71,7 +69,7 @@ void str_ser4(int sockfd)
 
     char buf[BUFSIZE];
     FILE *fp;
-    char recvs[DATALEN];
+    char recvs[2 * DATALEN];
     struct ack_so ack;
     int end = 0, n = 0;
     long lseek = 0;
@@ -93,6 +91,7 @@ void str_ser4(int sockfd)
             end = 1;
             n--;
         }
+        
         memcpy((buf + lseek), recvs, n);
         lseek += n;
         // void *memcpy(void *str1, const void *str2, size_t n)
