@@ -13,7 +13,7 @@ int main(void)
 	int sockfd, con_fd, ret;
 	struct sockaddr_in my_addr;
 	struct sockaddr_in their_addr;
-	int sin_size;
+	uint sin_size;
 	pid_t pid;
 
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);          //create socket
