@@ -14,7 +14,7 @@ int main(void)
 	int sockfd, con_fd, ret;
 	struct sockaddr_in my_addr;
 	struct sockaddr_in their_addr;
-	int sin_size;
+	uint sin_size;
 
 //	char *buf;
 	pid_t pid;
