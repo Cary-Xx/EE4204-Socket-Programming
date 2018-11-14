@@ -76,7 +76,7 @@ int main(int argc, char **argv)
 
     ti = str_cli4(fp, sockfd, (struct sockaddr *)&ser_addr, sizeof(struct sockaddr_in), &len); //perform the transmission and receiving
     rt = (len / (float)ti);          //caculate the average transmission rate
-    printf("Time(ms) : %.3f, Data sent(byte): %d\nData rate: %f (Kbytes/s)\n", ti, (int)len, rt);
+    printf("Time(ms) : %.3f, Data sent(byte): %d\nData rate: %f (Kbytes/s)\n", 1, (int)len, 1);
 
     close(sockfd);
     fclose(fp);
