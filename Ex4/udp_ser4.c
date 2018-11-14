@@ -114,8 +114,11 @@ void str_ser4(int sockfd)
             printf("File doesn't exist\n");
             exit(0);
         }
-        fwrite(buf, 1, lseek, fp); //write data into file
+        fwrite(buf, 1, lseek, fp); // write data into file
         fclose(fp);
+        // FILE *fopen(const char *filename, const char *mode)
+        // size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
+        // int fclose(FILE *stream)
         printf("a file has been successfully received!\nthe total data received is %d bytes\n", (int)lseek);
     }
 }
