@@ -4,7 +4,7 @@ udp_client.c: the source file of the client in udp transmission
 
 #include "headsock.h" // include the header file for UDP transmission
 
-float str_cli4(FILE *fp, int sockfd, long *len); //transmission function
+float str_cli4(FILE *fp, int sockfd, struct sockaddr *addr, int addrlen, long *len); //transmission function
 
 void tv_sub(struct timeval *out, struct timeval *in); //calculate the time interval between out and in
 
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
         exit(0);
     }
 
-    ti = str_cli4(fp, sockfd, &len); //perform the transmission and receiving
+    ti = str_cli4(fp, sockfd, (struct sockaddr *)&ser_addr, sizeof(struct sockaddr_in), &len); //perform the transmission and receiving
     rt = (len / (float)ti);          //caculate the average transmission rate
     printf("Time(ms) : %.3f, Data sent(byte): %d\nData rate: %f (Kbytes/s)\n", ti, (int)len, rt);
 
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
     exit(0);
 }
 
-float str_cli4(FILE *fp, int sockfd, long *len)
+float str_cli4(FILE *fp, int sockfd, struct sockaddr *addr, int addrlen, long *len)
 {
     char *buf;               // buffer char array
     long lsize, ci;          // lsize -> entire size, ci -> current index
@@ -142,10 +142,10 @@ float str_cli4(FILE *fp, int sockfd, long *len)
 
         memcpy(sends, (buf + ci), slen);
 
-        n = send(sockfd, &sends, slen, 0);
+        n = sendto(sockfd, &sends, slen, 0, addr, addrlen);
         if (n == -1)
         {
-            printf("send error!"); //send the data
+            printf("send error!\n"); //send the data
             exit(1);
         }
 
@@ -159,7 +159,7 @@ float str_cli4(FILE *fp, int sockfd, long *len)
             printf("error in transmission\n");
         }
     }
-    
+
     // calculating time taken for transfer
     gettimeofday(&recvt, NULL); //get current time
     *len = ci;
