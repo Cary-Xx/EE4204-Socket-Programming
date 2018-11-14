@@ -158,31 +158,31 @@ float str_cli4(FILE *fp, int sockfd, long *len)
             }
         }
     }
-        if ((n = recv(sockfd, &ack, 2, 0)) == -1) //receive the ack
-        {
-            printf("error when receiving ack\n");
-            exit(1);
-        }
-        if (ack.num != 1 || ack.len != 0)
-        {
-            printf("error in transmission\n");
-        }
+    if ((n = recv(sockfd, &ack, 2, 0)) == -1) //receive the ack
+    {
+        printf("error when receiving ack\n");
+        exit(1);
+    }
+    if (ack.num != 1 || ack.len != 0)
+    {
+        printf("error in transmission\n");
+    }
 
-        // calculating time taken for transfer
-        gettimeofday(&recvt, NULL); //get current time
-        *len = ci;
-        tv_sub(&recvt, &sendt); // get the whole trans time
-        time_inv += (recvt.tv_sec) * 1000.0 + (recvt.tv_usec) / 1000.0;
-        free(buf);
-        return (time_inv);
+    // calculating time taken for transfer
+    gettimeofday(&recvt, NULL); //get current time
+    *len = ci;
+    tv_sub(&recvt, &sendt); // get the whole trans time
+    time_inv += (recvt.tv_sec) * 1000.0 + (recvt.tv_usec) / 1000.0;
+    free(buf);
+    return (time_inv);
 }
 
-    void tv_sub(struct timeval * out, struct timeval * in)
+void tv_sub(struct timeval *out, struct timeval *in)
+{
+    if ((out->tv_usec -= in->tv_usec) < 0)
     {
-        if ((out->tv_usec -= in->tv_usec) < 0)
-        {
-            --out->tv_sec;
-            out->tv_usec += 1000000;
-        }
-        out->tv_sec -= in->tv_sec;
+        --out->tv_sec;
+        out->tv_usec += 1000000;
+    }
+    out->tv_sec -= in->tv_sec;
 }
