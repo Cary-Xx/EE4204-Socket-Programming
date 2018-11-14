@@ -76,7 +76,7 @@ int main(int argc, char **argv)
 
     ti = str_cli4(fp, sockfd, (struct sockaddr *)&ser_addr, sizeof(struct sockaddr_in), &len); //perform the transmission and receiving
     rt = (len / (float)ti);          //caculate the average transmission rate
-    printf("Time(ms) : %.3f, Data sent(byte): %d\nData rate: %f (Kbytes/s)\n", 1, (int)len, 1);
+    printf("Time(ms) : %.3f, Data sent(byte): %d\nData rate: %f (Kbytes/s)\n", ti, (int)len, rt);
 
     close(sockfd);
     fclose(fp);
@@ -149,7 +149,7 @@ float str_cli4(FILE *fp, int sockfd, struct sockaddr *addr, int addrlen, long *l
             exit(1);
         }
 
-        if ((n = recv(sockfd, &ack, 2, 0)) == -1) //receive the ack
+        if ((n = recvfrom(sockfd, &ack, 2, 0, addr, (socklen_t *)&addrlen)) == -1) //receive the ack
         {
             printf("error when receiving ack\n");
             exit(1);
