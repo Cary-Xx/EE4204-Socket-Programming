@@ -72,4 +72,3 @@ void str_cli(FILE *fp, int sockfd)
 	send(sockfd, sends, strlen(sends), 0);		//send the string to the server(receiver)
 	printf("send out!!\n");
 }
-
