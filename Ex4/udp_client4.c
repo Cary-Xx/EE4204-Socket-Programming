@@ -2,179 +2,197 @@
 udp_client.c: the source file of the client in udp transmission
 ********************************/
 
-#include "headsock.h" // include the header file for UDP transmission
+#include "headsock.h"
 
-float str_cli4(FILE *fp, int sockfd, struct sockaddr *addr, int addrlen, long *len); //transmission function
-
-void tv_sub(struct timeval *out, struct timeval *in); //calculate the time interval between out and in
+float str_cli(FILE *fp, int sockfd, struct sockaddr *addr, int addrlen, long *len); //transmission function
+void tv_sub(struct timeval *out, struct timeval *in);																//calcu the time interval between out and in
 
 int main(int argc, char **argv)
 {
-    int sockfd;
-    float ti, rt;
-    long len;
-    struct sockaddr_in ser_addr;
-    char **pptr;
-    struct hostent *sh;
-    struct in_addr **addrs;
-    FILE *fp;
+	int sockfd;
+	float ti, rt;
+	long len;
+	struct sockaddr_in ser_addr;
+	char **pptr;
+	struct hostent *sh;
+	struct in_addr **addrs;
+	FILE *fp;
 
-    /*
-			struct hostent {
-			    char  *h_name;            // hostname
-			    char **h_aliases;         // alias list
-			    int    h_addrtype;        // host address type
-			    int    h_length;          // address length
-			    char **h_addr_list;       // list of addresses
-			}
-	*/
+	if (argc != 2)
+	{
+		printf("parameters not match");
+	}
 
-    if (argc != 2)
-    {
-        printf("parameters not match");
-    }
+	sh = gethostbyname(argv[1]); //get host's information
+	if (sh == NULL)
+	{
+		printf("error when gethostby name");
+		exit(0);
+	}
 
-    // returns struct of type hostent for given hostname or IPv4
-    sh = gethostbyname(argv[1]);
-    if (sh == NULL)
-    {
-        printf("error when gethostby name");
-        exit(0);
-    }
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0); //create the socket
+	if (sockfd < 0)
+	{
+		printf("error in socket");
+		exit(1);
+	}
 
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0); //create socket
-    if (sockfd == -1)
-    {
-        printf("error in socket");
-        exit(1);
-    }
+	addrs = (struct in_addr **)sh->h_addr_list;
+	printf("canonical name: %s\n", sh->h_name); //print the remote host's information
+	for (pptr = sh->h_aliases; *pptr != NULL; pptr++)
+		printf("the aliases name is: %s\n", *pptr);
+	switch (sh->h_addrtype)
+	{
+	case AF_INET:
+		printf("AF_INET\n");
+		break;
+	default:
+		printf("unknown addrtype\n");
+		break;
+	}
 
-    addrs = (struct in_addr **)sh->h_addr_list;
-    printf("canonical name: %s\n", sh->h_name);
-    for (pptr = sh->h_aliases; *pptr != NULL; pptr++)
-        printf("the aliases name is: %s\n", *pptr); // print the remote host's information
-    switch (sh->h_addrtype)
-    {
-    case AF_INET:
-        printf("AF_INET\n");
-        break;
-    default:
-        printf("unknown addrtype\n");
-        break;
-    }
+	ser_addr.sin_family = AF_INET;
+	ser_addr.sin_port = htons(MYUDP_PORT);
+	memcpy(&(ser_addr.sin_addr.s_addr), *addrs, sizeof(struct in_addr));
+	bzero(&(ser_addr.sin_zero), 8);
 
-    ser_addr.sin_family = AF_INET;
-    ser_addr.sin_port = htons(MYUDP_PORT);
-    memcpy(&(ser_addr.sin_addr.s_addr), *addrs, sizeof(struct in_addr));
-    bzero(&(ser_addr.sin_zero), 8);
+	if ((fp = fopen("myfile.txt", "r+t")) == NULL)
+	{
+		printf("File doesn't exit\n");
+		exit(0);
+	}
 
-    if ((fp = fopen("myfile.txt", "r+t")) == NULL)
-    {
-        printf("File doesn't exit\n");
-        exit(0);
-    }
+	//perform the transmission and receiving
+	ti = str_cli(fp, sockfd, (struct sockaddr *)&ser_addr, sizeof(struct sockaddr_in), &len);
+	rt = (len / (float)ti); //caculate the average transmission rate
+	printf("Time(ms) : %.3f, Data sent(byte): %d\nData rate: %f (Kbytes/s)\n", ti, (int)len, rt);
 
-    ti = str_cli4(fp, sockfd, (struct sockaddr *)&ser_addr, sizeof(struct sockaddr_in), &len); //perform the transmission and receiving
-    rt = (len / (float)ti);          //caculate the average transmission rate
-    printf("Time(ms) : %.3f, Data sent(byte): %d\nData rate: %f (Kbytes/s)\n", ti, (int)len, rt);
+	close(sockfd);
+	fclose(fp);
 
-    close(sockfd);
-    fclose(fp);
-    exit(0);
+	exit(0);
 }
 
-float str_cli4(FILE *fp, int sockfd, struct sockaddr *addr, int addrlen, long *len)
+float str_cli(FILE *fp, int sockfd, struct sockaddr *addr, int addrlen, long *len)
 {
-    char *buf;               // buffer char array
-    long lsize, ci;          // lsize -> entire size, ci -> current index
-    char sends[2 * DATALEN]; // packet to be sent
-    struct ack_so ack;       //
-    int n, slen;             // 1DU or 2DU
-    float time_inv = 0.0;
-    struct timeval sendt, recvt;
-    ci = 0;
-    int stage = 1;
+	char *buf;
+	long lsize, ci;					 //lsize=entire file size; ci=curr index of buf
+	char sends[2 * DATALEN]; // to send 1 or 2 DU
+	struct ack_so ack;
+	int n, slen; // slen=len of string to send (either 1DU or 2*1DU)
+	float time_inv = 0.0;
+	struct timeval sendt, recvt;
+	int status = 1;
+	ci = 0;
 
-    fseek(fp, 0, SEEK_END);
-    // returns current file position of given stream
-    // SEEK_SET / SEEK_CUR / SEEK_END
-    // int fseek(FILE *stream, long int offset, int whence)
+	fseek(fp, 0, SEEK_END);
+	lsize = ftell(fp);
+	rewind(fp);
+	printf("The file length is %d bytes\n", (int)lsize);
+	printf("the packet length is %d bytes\n", DATALEN);
 
-    lsize = ftell(fp); // lsize get's the last position of the file
-    rewind(fp);        // sets back the file position to the start
-    printf("The file length is %d bytes\n", (int)lsize);
-    printf("the packet length is %d bytes\n", DATALEN);
+	// allocate memory to contain the whole file.
+	buf = (char *)malloc(lsize);
+	if (buf == NULL)
+		exit(2);
 
-    // allocate memory to contain the whole file.
-    buf = (char *)malloc(lsize);
-    if (buf == NULL)
-        exit(2);
+	// copy the file into the buffer.
+	fread(buf, 1, lsize, fp);
 
-    // copy the file into the buffer.
-    fread(buf, 1, lsize, fp);
-    // size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
+	/*** the whole file is loaded in the buffer. ***/
+	buf[lsize] = '\0';					//append the end byte (extra byte sent to server)
+	gettimeofday(&sendt, NULL); //get the current time
+	while (ci <= lsize)
+	{
+		// to track whether to send 1DU or 2*1DU
+		status++;
 
-    /*** the whole file is loaded in the buffer. ***/
-    buf[lsize] = '\0';          //append the end byte (extra byte sent to server)
-    gettimeofday(&sendt, NULL); //get the current time
+		// alternate between 1 and 2 DU
+		if (status % 2 == 0)
+		{
+			for (int i = 0; i < 2; i++)
+			{
+				if ((lsize + 1 - ci) <= DATALEN) // the last part of file that is < 1 or 2 DU
+					slen = lsize + 1 - ci;
+				else
+					slen = DATALEN;
 
-    while (ci <= lsize)
-    {
-        // to track whether to send 1DU or 2*1DU
-        stage++;
-        if (stage % 2 == 0)
-        {
-            for (int i = 0; i < 2; i++)
-            {
-                if ((lsize + 1 - ci) <= DATALEN) // the last part of file that is < 1 or 2 DU
-                    slen = lsize + 1 - ci;
-                else
-                    slen = DATALEN;
-            }
-        }
-        else
-        {
-            if ((lsize + 1 - ci) <= DATALEN) // the last part of file that is < 1 or 2 DU
-                slen = lsize + 1 - ci;
-            else
-                slen = DATALEN;
-        }
+				memcpy(sends, (buf + ci), slen);
+				// printf("%d bytes of data sent: %s\n", slen, sends);
 
-        memcpy(sends, (buf + ci), slen);
+				n = sendto(sockfd, &sends, slen, 0, addr, addrlen);
+				if (n == -1)
+				{
+					printf("send error!"); //send the data
+					exit(1);
+				}
 
-        n = sendto(sockfd, &sends, slen, 0, addr, addrlen);
-        if (n == -1)
-        {
-            printf("send error!\n"); //send the data
-            exit(1);
-        }
+				ci += slen;
+			}
+			//printf("Even interval; 2DU\n");
+		}
+		else
+		{
+			if ((lsize + 1 - ci) <= DATALEN) // the last part of file that is < 1 or 2 DU
+				slen = lsize + 1 - ci;
+			else
+				slen = DATALEN;
 
-        if ((n = recvfrom(sockfd, &ack, 2, 0, addr, (socklen_t *)&addrlen)) == -1) //receive the ack
-        {
-            printf("error when receiving ack\n");
-            exit(1);
-        }
-        if (ack.num != 1 || ack.len != 0)
-        {
-            printf("error in transmission\n");
-        }
-    }
+			memcpy(sends, (buf + ci), slen);
+			// printf("%d bytes of data sent: %s\n", slen, sends);
 
-    // calculating time taken for transfer
-    gettimeofday(&recvt, NULL); //get current time
-    *len = ci;
-    tv_sub(&recvt, &sendt); // get the whole trans time
-    time_inv += (recvt.tv_sec) * 1000.0 + (recvt.tv_usec) / 1000.0;
-    free(buf);
-    return (time_inv);
+			n = sendto(sockfd, &sends, slen, 0, addr, addrlen);
+			if (n == -1)
+			{
+				printf("send error!"); //send the data
+				exit(1);
+			}
+
+			ci += slen;
+			//printf("Odd interval; 1DU\n");
+		}
+
+		if ((n = recvfrom(sockfd, &ack, 2, 0, addr, (socklen_t *)&addrlen)) == -1)
+		{ //receive the ack
+			printf("error when receiving ack\n");
+			exit(1);
+		}
+		if (ack.num != 1 || ack.len != 0)
+		{
+			printf("error in transmission\n");
+		}
+		//printf("Packet acknowledged: %d\n", status);
+	}
+
+	// printf("exited while loop to send data\n");
+	// if ((n= recvfrom(sockfd, &ack, 2, 0, addr, (socklen_t *)&addrlen))==-1)   //receive the final ack
+	// {
+	// printf("error when receiving\n");
+	// exit(1);
+	// }
+	// else
+	// printf("ack received\n");
+
+	// if (ack.num != 1|| ack.len != 0)      // it is not an ack
+	// printf("error in transmission\n");
+
+	*len = ci;
+	// printf("final total size %d bytes\n", (int)*len);
+
+	// calculating time taken for transfer
+	gettimeofday(&recvt, NULL); //get current time
+	tv_sub(&recvt, &sendt);			// get the whole trans time
+	time_inv += (recvt.tv_sec) * 1000.0 + (recvt.tv_usec) / 1000.0;
+	free(buf);
+	return (time_inv);
 }
 
 void tv_sub(struct timeval *out, struct timeval *in)
 {
-    if ((out->tv_usec -= in->tv_usec) < 0)
-    {
-        --out->tv_sec;
-        out->tv_usec += 1000000;
-    }
-    out->tv_sec -= in->tv_sec;
+	if ((out->tv_usec -= in->tv_usec) < 0)
+	{
+		--out->tv_sec;
+		out->tv_usec += 1000000;
+	}
+	out->tv_sec -= in->tv_sec;
 }
