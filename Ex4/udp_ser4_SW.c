@@ -73,7 +73,7 @@ void str_ser4(int sockfd, struct sockaddr *addr, int addrlen)
     struct ack_so ack;
     int end = 0, n = 0;
     long lseek = 0;
-    int stage = 0;
+    // int stage = 0;
 
     while (!end)
     {
@@ -93,23 +93,18 @@ void str_ser4(int sockfd, struct sockaddr *addr, int addrlen)
         }
         memcpy((buf + lseek), recvs, n);
         lseek += n;
+        
         // void *memcpy(void *str1, const void *str2, size_t n)
         // copies n characters from memory area str2 to memory area str1
-
-        if (stage % 2 == 0) // send ack
+        ack.num = 1;
+        ack.len = 0;
+        if ((n = sendto(sockfd, &ack, 2, 0, addr, addrlen)) == -1)
         {
-            ack.num = 1;
-            ack.len = 0;
-            if ((n = sendto(sockfd, &ack, 2, 0, addr, addrlen)) == -1)
-            {
-                printf("send error!\n");
-                exit(1);
-            }
+            printf("send error!\n");
+            exit(1);
         }
-        stage++;
-        if (stage == 3)
-            stage -= 3;
     }
+
     if ((fp = fopen("myTCPreceive.txt", "wt")) == NULL)
     {
         printf("File doesn't exist\n");

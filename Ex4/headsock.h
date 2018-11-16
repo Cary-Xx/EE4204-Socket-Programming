@@ -16,7 +16,7 @@
 #define NEWFILE (O_WRONLY|O_CREAT|O_TRUNC)
 #define MYTCP_PORT 4950
 #define MYUDP_PORT 5350          // UDP port #
-#define DATALEN 500              // packet data length
+#define DATALEN 400             // packet data length
 #define BUFSIZE 60000            // buffer size
 #define PACKLEN 508              // data unit length
 #define HEADLEN 8                // header length    

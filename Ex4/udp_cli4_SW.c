@@ -93,7 +93,7 @@ float str_cli4(FILE *fp, int sockfd, struct sockaddr *addr, int addrlen, long *l
     float time_inv = 0.0;
     struct timeval sendt, recvt;
     ci = 0;
-    int stage = 1;
+    // int stage = 1;
     int packet = 0;
 
     fseek(fp, 0, SEEK_END);
@@ -134,62 +134,37 @@ float str_cli4(FILE *fp, int sockfd, struct sockaddr *addr, int addrlen, long *l
     while (ci <= lsize)
 
     {
-        // to track whether to send 1DU or 2DU
-        stage++;
-
-        if (stage % 2 == 0) // even stage 2DU
-        {   
-            packet += 2;
-            for (int i = 0; i < 2; i++) // 2DU
-            {
-                if ((lsize + 1 - ci) <= DATALEN) // the last part of file
-                    slen = lsize + 1 - ci;
-                else
-                    slen = DATALEN;
-
-                memcpy(sends, (buf + ci), slen);
-
-                n = sendto(sockfd, &sends, slen, 0, addr, addrlen);
-                if (n == -1)
-                {
-                    printf("send error!\n"); //send the data
-                    exit(1);
-                }
-
-                ci += slen;
-            }
-        }
+        if ((lsize + 1 - ci) <= DATALEN) // the last part of file
+            slen = lsize + 1 - ci;
         else
-        {   
-            packet ++;
-            if ((lsize + 1 - ci) <= DATALEN) // the last part of file
-                slen = lsize + 1 - ci;
-            else
-                slen = DATALEN;
+            slen = DATALEN;
 
-            memcpy(sends, (buf + ci), slen);
+        memcpy(sends, (buf + ci), slen);
 
-            n = sendto(sockfd, &sends, slen, 0, addr, addrlen);
-            if (n == -1)
-            {
-                printf("send error!\n"); //send the data
-                exit(1);
-            }
-
-            ci += slen;
+        n = sendto(sockfd, &sends, slen, 0, addr, addrlen);
+        if (n == -1)
+        {
+            printf("send error!\n"); //send the data
+            exit(1);
         }
         if ((n = recvfrom(sockfd, &ack, 2, 0, addr, (socklen_t *)&addrlen)) == -1) //receive the ack
         {
             printf("error when receiving ack\n");
             exit(1);
         }
+        ci += slen;
+    }
+        // if ((n = recvfrom(sockfd, &ack, 2, 0, addr, (socklen_t *)&addrlen)) == -1) //receive the ack
+        // {
+        //     printf("error when receiving ack\n");
+        //     exit(1);
+        // }
         if (ack.num != 1 || ack.len != 0)
         {
             printf("error in transmission\n");
         }
-    }
 
-        // calculating time taken for transfer
+    // calculating time taken for transfer
     gettimeofday(&recvt, NULL); //get current time
     *len = ci;
     tv_sub(&recvt, &sendt); // get the whole trans time
